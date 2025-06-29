@@ -3,13 +3,13 @@ from .ui.main import (
     WeChatSubWnd
 )
 from .param import (
-    WxResponse, 
-    WxParam, 
+    WxResponse,
+    WxParam,
     PROJECT_NAME
 )
 from .logger import wxlog
 from typing import (
-    Union, 
+    Union,
     List,
     Dict,
     Callable,
@@ -62,16 +62,17 @@ class Listener(ABC):
     def _get_listen_messages(self):
         ...
 
+
 class Chat:
     """微信聊天窗口实例"""
 
-    def __init__(self, core: WeChatSubWnd=None):
+    def __init__(self, core: WeChatSubWnd = None):
         self.core = core
         self.who = self.core.nickname
 
     def __repr__(self):
         return f'<{PROJECT_NAME} - {self.__class__.__name__} object("{self.core.nickname}")>'
-    
+
     def Show(self):
         """显示窗口"""
         self.core._show()
@@ -83,15 +84,15 @@ class Chat:
             dict: 聊天窗口信息
         """
         return self.core.chatbox.get_info()
-    
+
     def SendMsg(
-            self, 
+            self,
             msg: str,
-            who: str=None,
-            clear: bool=True, 
-            at: Union[str, List[str]]=None,
-            exact: bool=False,
-        ) -> WxResponse:
+            who: str = None,
+            clear: bool = True,
+            at: Union[str, List[str]] = None,
+            exact: bool = False,
+    ) -> WxResponse:
         """发送消息
 
         Args:
@@ -107,11 +108,11 @@ class Chat:
         return self.core.send_msg(msg, who, clear, at, exact)
 
     def SendFiles(
-            self, 
-            filepath, 
-            who=None, 
+            self,
+            filepath,
+            who=None,
             exact=False
-        ) -> WxResponse:
+    ) -> WxResponse:
         """向当前聊天窗口发送文件
         
         Args:
@@ -123,8 +124,8 @@ class Chat:
             WxResponse: 是否发送成功
         """
         return self.core.send_files(filepath, who, exact)
-    
-    def LoadMoreMessage(self, interval: float=0.3) -> WxResponse:
+
+    def LoadMoreMessage(self, interval: float = 0.3) -> WxResponse:
         """加载更多消息
 
         Args:
@@ -139,7 +140,7 @@ class Chat:
             List[Message]: 当前聊天窗口的所有消息
         """
         return self.core.get_msgs()
-    
+
     def GetNewMessage(self) -> List['Message']:
         """获取当前聊天窗口的新消息
 
@@ -153,7 +154,7 @@ class Chat:
             self.core.chatbox._update_used_msg_ids()
             return []
         return self.core.get_new_msgs()
-    
+
     def GetGroupMembers(self) -> List[str]:
         """获取当前聊天群成员
 
@@ -161,7 +162,7 @@ class Chat:
             list: 当前聊天群成员列表
         """
         return self.core.get_group_members()
-    
+
     def Close(self) -> None:
         """关闭微信窗口"""
         self.core.close()
@@ -171,10 +172,10 @@ class WeChat(Chat, Listener):
     """微信主窗口实例"""
 
     def __init__(
-            self, 
-            debug: bool=False,
+            self,
+            debug: bool = False,
             **kwargs
-        ):
+    ):
         hwnd = None
         if 'hwnd' in kwargs:
             hwnd = kwargs['hwnd']
@@ -186,6 +187,10 @@ class WeChat(Chat, Listener):
             wxlog.debug('Debug mode is on')
         self._listener_start()
         self.Show()
+
+    @property
+    def wechat_id(self):
+        return self.core.wechat_id
 
     def _get_listen_messages(self):
         try:
@@ -208,7 +213,7 @@ class WeChat(Chat, Listener):
                     wxlog.debug(f"[{msg.attr} {msg.type}]获取到新消息：{who} - {msg.content}")
                     chat.Show()
                     self._safe_callback(callback, msg, chat)
-    
+
     def GetSession(self) -> List['SessionElement']:
         """获取当前会话列表
 
@@ -218,11 +223,11 @@ class WeChat(Chat, Listener):
         return self.core.sessionbox.get_session()
 
     def ChatWith(
-        self, 
-        who: str, 
-        exact: bool=False,
-        force: bool=False,
-        force_wait: Union[float, int] = 0.5
+            self,
+            who: str,
+            exact: bool = False,
+            force: bool = False,
+            force_wait: Union[float, int] = 0.5
     ):
         """打开聊天窗口
         
@@ -235,13 +240,12 @@ class WeChat(Chat, Listener):
             
         """
         return self.core.switch_chat(who, exact, force, force_wait)
-    
 
     def AddListenChat(
             self,
             nickname: str,
             callback: Callable[['Message', str], None],
-        ) -> WxResponse:
+    ) -> WxResponse:
         """添加监听聊天，将聊天窗口独立出去形成Chat对象子窗口，用于监听
         
         Args:
@@ -257,7 +261,7 @@ class WeChat(Chat, Listener):
         chat = Chat(subwin)
         self.listen[name] = (chat, callback)
         return chat
-    
+
     def StopListening(self, remove: bool = True) -> None:
         """停止监听"""
         while self._listener_thread.is_alive():
@@ -271,12 +275,11 @@ class WeChat(Chat, Listener):
         if not self._listener_thread.is_alive():
             self._listener_start()
 
-
     def RemoveListenChat(
-            self, 
+            self,
             nickname: str,
             close_window: bool = True
-        ) -> WxResponse:
+    ) -> WxResponse:
         """移除监听聊天
 
         Args:
@@ -293,7 +296,7 @@ class WeChat(Chat, Listener):
             chat.Close()
         del self.listen[nickname]
         return WxResponse.success()
-    
+
     def GetNextNewMessage(self, filter_mute=False) -> Dict[str, List['Message']]:
         """获取下一个新消息
         
@@ -324,7 +327,7 @@ class WeChat(Chat, Listener):
         """
         if subwin := self.core.get_sub_wnd(nickname):
             return Chat(subwin)
-        
+
     def GetAllSubWindow(self) -> List['Chat']:
         """获取所有子窗口实例
         
@@ -332,7 +335,7 @@ class WeChat(Chat, Listener):
             List[Chat]: 所有子窗口实例
         """
         return [Chat(subwin) for subwin in self.core.get_all_sub_wnds()]
-    
+
     def KeepRunning(self):
         """保持运行"""
         while not self._listener_stop_event.is_set():
