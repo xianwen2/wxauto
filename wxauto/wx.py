@@ -316,6 +316,10 @@ class WeChat(Chat, Listener):
         """切换到联系人页面"""
         self.core.navigation.contact_icon.Click()
 
+    def SwitchToVideo(self) -> None:
+        """ 切换到视频号"""
+        self.core.navigation.video_icon.Click()
+
     def GetSubWindow(self, nickname: str) -> 'Chat':
         """获取子窗口实例
         
