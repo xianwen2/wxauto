@@ -333,7 +333,7 @@ def IsRedPixel(uicontrol):
 
 def print_control_tree(control, indent=0, prefix="", use_unicode=True):
     """
-    递归打印控件层次结构，呈现树状结构。
+    递归打印控件层次结构，呈现树状结构，使用 loguru 进行日志记录。
     包括浏览器特定的标签元素，适用于浏览器控件，包括微信的嵌入式浏览器。
 
     参数:
@@ -342,6 +342,7 @@ def print_control_tree(control, indent=0, prefix="", use_unicode=True):
         prefix (str): 当前行的树状前缀。
         use_unicode (bool): 是否使用 Unicode 字符绘制树。
     """
+    from wxauto.logger import wxlog as logger
     # 根据 Unicode 标志定义树状字符
     vline, branch, last_branch = ('│   ', '├──', '└──') if use_unicode else ('|   ', '|--', '`--')
 
@@ -381,8 +382,8 @@ def print_control_tree(control, indent=0, prefix="", use_unicode=True):
         # 格式化控件信息
         control_info = f"{class_name} (名称: {name}，类型: {control_type}{content_info})"
 
-        # 打印当前节点
-        print(f"{vline * (indent - 1)}{prefix} {control_info}" if indent else control_info)
+        # 使用 loguru 记录当前节点，INFO 级别用于正常输出
+        logger.info(f"{vline * (indent - 1)}{prefix} {control_info}" if indent else control_info)
 
         # 缓存子节点以避免多次调用 GetChildren()
         children = getattr(control, 'GetChildren', lambda: [])()
@@ -396,6 +397,6 @@ def print_control_tree(control, indent=0, prefix="", use_unicode=True):
             print_control_tree(child, indent + 1, next_prefix, use_unicode)
 
     except Exception as e:
-        # 优雅处理错误，输出最少信息
+        # 使用 loguru 的 ERROR 级别记录错误
         error_msg = f"错误: {str(e)}"
-        print(f"{vline * (indent - 1)}{prefix} {error_msg}")
+        logger.error(f"{vline * (indent - 1)}{prefix} {error_msg}")
