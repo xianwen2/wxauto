@@ -3,7 +3,7 @@ from wxauto.param import (
     WxParam, 
 )
 from wxauto.languages import *
-from wxauto.uiautomation import Control
+from wxauto.uia import Control
 
 class NavigationBox:
     def __init__(self, control, parent):

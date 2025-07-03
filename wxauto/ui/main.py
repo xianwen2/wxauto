@@ -2,7 +2,8 @@ from .base import (
     BaseUIWnd,
     BaseUISubWnd
 )
-from wxauto import uiautomation as uia
+# from wxauto import uiautomation as uia
+from wxauto.uia import uiautomation as uia
 from wxauto.param import WxResponse
 from .chatbox import ChatBox
 from .sessionbox import SessionBox
@@ -119,7 +120,7 @@ class WeChatMainWnd(WeChatSubWnd):
                 raise Exception(f'未找到微信窗口')
             self._setup_ui(hwnd)
 
-        print(f'初始化成功，获取到已登录窗口：{self.nickname}')
+        wxlog.info(f'初始化成功，获取到已登录窗口：{self.nickname}')
 
     def _setup_ui(self, hwnd: int):
         self.HWND = hwnd
@@ -137,6 +138,14 @@ class WeChatMainWnd(WeChatSubWnd):
 
     def __repr__(self):
         return f'<{PROJECT_NAME} - {self.__class__.__name__} object("{self.nickname}")>'
+
+    def Show(self):
+        if hasattr(self, 'HWND'):
+            import win32gui
+            win32gui.ShowWindow(self.HWND, 1)
+            win32gui.SetWindowPos(self.HWND, -1, 0, 0, 0, 0, 3)
+            win32gui.SetWindowPos(self.HWND, -2, 0, 0, 0, 0, 3)
+        self.control.SwitchToThisWindow()
 
     def _lang(self, text: str, main_type="WECHAT_MAIN") -> str:
         return eval(main_type).get(text, {WxParam.LANGUAGE: text}).get(WxParam.LANGUAGE)
@@ -160,6 +169,7 @@ class WeChatMainWnd(WeChatSubWnd):
         获取微信号
         """
         if not getattr(self, "__wechat_id", None):
+            self.Show()
             self.navigation.my_icon.Click()
             __wechat_id = self.control.PaneControl(ClassName="ContactProfileWnd").TextControl(
                 Name=self._lang("微信号", "PROFILE_CARD")).GetParentControl().GetChildren()[1].Name

@@ -1,5 +1,11 @@
 from wxauto.param import WxParam
 
+try:
+    from loguru import logger
+
+    is_loguru = True
+except:
+    is_loguru = False
 import logging
 import colorama
 from pathlib import Path
@@ -128,4 +134,7 @@ class WxautoLogger:
 
 
 # wxlog实例化的地方不再创建文件日志
-wxlog = WxautoLogger()
+if is_loguru:
+    wxlog = logger
+else:
+    wxlog = WxautoLogger()

@@ -1,10 +1,12 @@
-from wxauto import uiautomation as uia
+from wxauto import uia
 from wxauto.param import PROJECT_NAME
 from wxauto.logger import wxlog
+from wxauto.utils.lock import uilock
 from abc import ABC, abstractmethod
 import win32gui
 from typing import Union
 import time
+
 
 class BaseUIWnd(ABC):
     _ui_cls_name: str = None
@@ -12,14 +14,15 @@ class BaseUIWnd(ABC):
     control: uia.Control
 
     @abstractmethod
-    def _lang(self, text: str):pass
+    def _lang(self, text: str):
+        pass
 
     def __repr__(self):
         return f"<{PROJECT_NAME} - {self.__class__.__name__} at {hex(id(self))}>"
-    
+
     def __eq__(self, other):
         return self.control == other.control
-    
+
     def __bool__(self):
         return self.exists()
 
@@ -30,6 +33,11 @@ class BaseUIWnd(ABC):
             win32gui.SetWindowPos(self.HWND, -2, 0, 0, 0, 0, 3)
         self.control.SwitchToThisWindow()
 
+    @property
+    def pid(self):
+        return self.control.ProcessId
+
+    @uilock
     def close(self):
         try:
             self.control.SendKeys('{Esc}')
@@ -43,6 +51,7 @@ class BaseUIWnd(ABC):
         except:
             return False
 
+
 class BaseUISubWnd(BaseUIWnd):
     root: BaseUIWnd
     parent: None
@@ -52,5 +61,3 @@ class BaseUISubWnd(BaseUIWnd):
             return self.parent._lang(text)
         else:
             return self.root._lang(text)
-
-

@@ -11,39 +11,69 @@ import pyperclip
 import psutil
 import ctypes
 from PIL import Image
-from wxauto import uiautomation as uia
+from wxauto.uia import uiautomation as uia
+
 
 def GetAllWindows():
     """
     获取所有窗口的信息，返回一个列表，每个元素包含 (窗口句柄, 类名, 窗口标题)
     """
     windows = []
-    
+
     def enum_windows_proc(hwnd, extra):
         class_name = win32gui.GetClassName(hwnd)  # 获取窗口类名
         window_title = win32gui.GetWindowText(hwnd)  # 获取窗口标题
         windows.append((hwnd, class_name, window_title))
-    
+
     win32gui.EnumWindows(enum_windows_proc, None)
     return windows
 
+
+def FindWindows(classname=None, name=None, timeout=0):
+    """
+    查找对应的窗口
+    """
+    windows = [i for i in GetAllWindows() if
+               i and ((classname and i[1] == classname) or not classname) and ((name and i[2] == name) or not name)]
+    return windows
+
+
 def GetCursorWindow():
+    """
+    获取当前鼠标光标所在窗口的信息，包括句柄、标题和类名
+    """
     x, y = win32api.GetCursorPos()
     hwnd = win32gui.WindowFromPoint((x, y))
     window_title = win32gui.GetWindowText(hwnd)
     class_name = win32gui.GetClassName(hwnd)
     return hwnd, window_title, class_name
 
+
+def get_active_window():
+    """
+    获取当前激活窗口
+    """
+    # 获取当前激活窗口的句柄
+    hwnd = win32gui.GetForegroundWindow()
+
+    # 获取窗口标题
+    window_title = win32gui.GetWindowText(hwnd)
+    class_name = win32gui.GetClassName(hwnd)
+    return hwnd, window_title, class_name
+
+
 def set_cursor_pos(x, y):
     win32api.SetCursorPos((x, y))
-    
+
+
 def Click(rect):
     x = (rect.left + rect.right) // 2
     y = (rect.top + rect.bottom) // 2
     set_cursor_pos(x, y)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, x, y, 0, 0)
     win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, x, y, 0, 0)
-    
+
+
 def GetPathByHwnd(hwnd):
     try:
         thread_id, process_id = win32process.GetWindowThreadProcessId(hwnd)
@@ -53,16 +83,18 @@ def GetPathByHwnd(hwnd):
         print(f"Error: {e}")
         return None
 
+
 def GetVersionByPath(file_path):
     try:
         info = win32api.GetFileVersionInfo(file_path, '\\')
         version = "{}.{}.{}.{}".format(win32api.HIWORD(info['FileVersionMS']),
-                                        win32api.LOWORD(info['FileVersionMS']),
-                                        win32api.HIWORD(info['FileVersionLS']),
-                                        win32api.LOWORD(info['FileVersionLS']))
+                                       win32api.LOWORD(info['FileVersionMS']),
+                                       win32api.HIWORD(info['FileVersionLS']),
+                                       win32api.LOWORD(info['FileVersionLS']))
     except:
         version = None
     return version
+
 
 def capture(hwnd, bbox):
     # 获取窗口的屏幕坐标
@@ -108,25 +140,28 @@ def capture(hwnd, bbox):
 
     # 裁剪目标区域
     cropped_im = im.crop((crop_left, crop_top, crop_right, crop_bottom))
-    
+
     return cropped_im
 
+
 def GetText(HWND):
-    length = win32gui.SendMessage(HWND, win32con.WM_GETTEXTLENGTH)*2
+    length = win32gui.SendMessage(HWND, win32con.WM_GETTEXTLENGTH) * 2
     buffer = win32gui.PyMakeBuffer(length)
     win32api.SendMessage(HWND, win32con.WM_GETTEXT, length, buffer)
     address, length_ = win32gui.PyGetBufferAddressAndLen(buffer[:-1])
-    text = win32gui.PyGetString(address, length_)[:int(length/2)]
+    text = win32gui.PyGetString(address, length_)[:int(length / 2)]
     buffer.release()
     return text
+
 
 def GetAllWindowExs(HWND):
     if not HWND:
         return
     handles = []
     win32gui.EnumChildWindows(
-        HWND, lambda hwnd, param: param.append([hwnd, win32gui.GetClassName(hwnd), GetText(hwnd)]),  handles)
+        HWND, lambda hwnd, param: param.append([hwnd, win32gui.GetClassName(hwnd), GetText(hwnd)]), handles)
     return handles
+
 
 def FindWindow(classname=None, name=None, timeout=0) -> int:
     t0 = time.time()
@@ -139,6 +174,7 @@ def FindWindow(classname=None, name=None, timeout=0) -> int:
         time.sleep(0.01)
     return HWND
 
+
 def FindTopLevelControl(classname=None, name=None, timeout=3):
     hwnd = FindWindow(classname, name, timeout)
     if hwnd:
@@ -146,19 +182,23 @@ def FindTopLevelControl(classname=None, name=None, timeout=3):
     else:
         return None
 
+
 def FindWinEx(HWND, classname=None, name=None) -> list:
     hwnds_classname = []
     hwnds_name = []
+
     def find_classname(hwnd, classname):
         classname_ = win32gui.GetClassName(hwnd)
         if classname_ == classname:
             if hwnd not in hwnds_classname:
                 hwnds_classname.append(hwnd)
+
     def find_name(hwnd, name):
         name_ = GetText(hwnd)
         if name in name_:
             if hwnd not in hwnds_name:
                 hwnds_name.append(hwnd)
+
     if classname:
         win32gui.EnumChildWindows(HWND, find_classname, classname)
     if name:
@@ -168,6 +208,7 @@ def FindWinEx(HWND, classname=None, name=None) -> list:
     else:
         hwnds = hwnds_classname + hwnds_name
     return hwnds
+
 
 def ClipboardFormats(unit=0, *units):
     units = list(units)
@@ -186,6 +227,7 @@ def ClipboardFormats(unit=0, *units):
     if u:
         units = ClipboardFormats(u, *units)
     return units
+
 
 def ReadClipboardData():
     Dict = {}
@@ -209,30 +251,33 @@ def ReadClipboardData():
                 retry_count -= 1
     return Dict
 
+
 def SetClipboardText(text: str):
     pyperclip.copy(text)
 
 
 class DROPFILES(ctypes.Structure):
     _fields_ = [
-    ("pFiles", ctypes.c_uint),
-    ("x", ctypes.c_long),
-    ("y", ctypes.c_long),
-    ("fNC", ctypes.c_int),
-    ("fWide", ctypes.c_bool),
+        ("pFiles", ctypes.c_uint),
+        ("x", ctypes.c_long),
+        ("y", ctypes.c_long),
+        ("fNC", ctypes.c_int),
+        ("fWide", ctypes.c_bool),
     ]
+
 
 pDropFiles = DROPFILES()
 pDropFiles.pFiles = ctypes.sizeof(DROPFILES)
 pDropFiles.fWide = True
 matedata = bytes(pDropFiles)
 
+
 def SetClipboardFiles(paths):
     for file in paths:
         if not os.path.exists(file):
             raise FileNotFoundError(f"file ({file}) not exists!")
     files = ("\0".join(paths)).replace("/", "\\")
-    data = files.encode("U16")[2:]+b"\0\0"
+    data = files.encode("U16")[2:] + b"\0\0"
     t0 = time.time()
     while True:
         if time.time() - t0 > 10:
@@ -240,7 +285,7 @@ def SetClipboardFiles(paths):
         try:
             win32clipboard.OpenClipboard()
             win32clipboard.EmptyClipboard()
-            win32clipboard.SetClipboardData(win32clipboard.CF_HDROP, matedata+data)
+            win32clipboard.SetClipboardData(win32clipboard.CF_HDROP, matedata + data)
             break
         except:
             pass
@@ -249,6 +294,7 @@ def SetClipboardFiles(paths):
                 win32clipboard.CloseClipboard()
             except:
                 pass
+
 
 def PasteFile(folder):
     folder = os.path.realpath(folder)
@@ -276,9 +322,80 @@ def PasteFile(folder):
         finally:
             win32clipboard.CloseClipboard()
 
+
 def IsRedPixel(uicontrol):
     rect = uicontrol.BoundingRectangle
-    hwnd = uicontrol.GetAncestorControl(lambda x,y:x.ClassName=='WeChatMainWndForPC').NativeWindowHandle
+    hwnd = uicontrol.GetAncestorControl(lambda x, y: x.ClassName == 'WeChatMainWndForPC').NativeWindowHandle
     bbox = (rect.left, rect.top, rect.right, rect.bottom)
     img = capture(hwnd, bbox)
     return any(p[0] > p[1] and p[0] > p[2] for p in img.getdata())
+
+
+def print_control_tree(control, indent=0, prefix="", use_unicode=True):
+    """
+    递归打印控件层次结构，呈现树状结构。
+    包括浏览器特定的标签元素，适用于浏览器控件，包括微信的嵌入式浏览器。
+
+    参数:
+        control: 要打印的控件对象（例如来自 pywinauto 或 uiautomation）。
+        indent (int): 当前缩进级别。
+        prefix (str): 当前行的树状前缀。
+        use_unicode (bool): 是否使用 Unicode 字符绘制树。
+    """
+    # 根据 Unicode 标志定义树状字符
+    vline, branch, last_branch = ('│   ', '├──', '└──') if use_unicode else ('|   ', '|--', '`--')
+
+    try:
+        # 安全获取控件详细信息，使用默认值作为回退
+        class_name = getattr(control, 'ClassName', '未知')
+        name = getattr(control, 'Name', '未命名')
+        control_type = getattr(control, 'ControlTypeName', '未知类型')
+
+        # 检查控件是否为浏览器窗口（包括微信的嵌入式浏览器）
+        is_browser = (
+                'MicroMessenger' in getattr(control, 'UserAgent', '').lower() or
+                class_name.lower() in (
+                    'chrome_widgetwin_0', 'chrome_widgetwin_1', 'wechat_browser', 'cefclient', 'mozilla_window_class',
+                    'ieframe')
+        )
+
+        content_info = ""
+        if is_browser:
+            try:
+                # 尝试访问浏览器特定属性
+                tag_name = getattr(control, 'tagName', None) or getattr(control, 'TagName', '无标签')
+                element_id = getattr(control, 'AutomationId', None) or getattr(control, 'ElementId', '无ID')
+                acc_name = getattr(control, 'AccessName', None) or getattr(control, 'AccessibleName', '无访问名称')
+
+                # 尝试提取页面内容（例如文本或 HTML）
+                try:
+                    # 使用 TextPattern 获取 UIA（如果启用了 --force-renderer-accessibility）
+                    text_pattern = getattr(control, 'GetPattern', lambda x: None)(10005)  # UIA_TextPatternId
+                    content = text_pattern.DocumentRange.GetText(-1) if text_pattern else '无文本'
+                except AttributeError:
+                    content = getattr(control, 'innerHTML', None) or getattr(control, 'textContent', '无内容')
+                content_info = f"，标签: {tag_name}，ID: {element_id}，访问名称: {acc_name}，内容: {content[:50]!r}..."
+            except AttributeError:
+                content_info = "，标签: 未知，ID: 未知，访问名称: 未知，内容: 未知"
+
+        # 格式化控件信息
+        control_info = f"{class_name} (名称: {name}，类型: {control_type}{content_info})"
+
+        # 打印当前节点
+        print(f"{vline * (indent - 1)}{prefix} {control_info}" if indent else control_info)
+
+        # 缓存子节点以避免多次调用 GetChildren()
+        children = getattr(control, 'GetChildren', lambda: [])()
+        if not children:
+            return
+
+        # 递归打印子节点
+        for i, child in enumerate(children):
+            is_last = i == len(children) - 1
+            next_prefix = last_branch if is_last else branch
+            print_control_tree(child, indent + 1, next_prefix, use_unicode)
+
+    except Exception as e:
+        # 优雅处理错误，输出最少信息
+        error_msg = f"错误: {str(e)}"
+        print(f"{vline * (indent - 1)}{prefix} {error_msg}")

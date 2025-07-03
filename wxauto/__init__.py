@@ -1,6 +1,8 @@
 from .wx import (
-    WeChat, 
-    Chat
+    WeChat,
+    Chat,
+    LoginWnd,
+    get_wx_clients
 )
 from .param import WxParam
 import pythoncom
@@ -10,5 +12,7 @@ pythoncom.CoInitialize()
 __all__ = [
     'WeChat',
     'Chat',
-    'WxParam'
+    'WxParam',
+    'LoginWnd',
+    'get_wx_clients'
 ]

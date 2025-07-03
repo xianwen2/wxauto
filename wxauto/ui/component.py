@@ -5,7 +5,7 @@ from wxauto.utils import (
     GetAllWindows,
 )
 from wxauto.param import (
-    WxParam, 
+    WxParam,
     WxResponse,
 )
 from wxauto.languages import *
@@ -13,20 +13,22 @@ from .base import (
     BaseUISubWnd
 )
 from wxauto.logger import wxlog
-from wxauto.uiautomation import (
+from wxauto.uia import (
     ControlFromHandle,
 )
 from wxauto.utils.tools import (
     get_file_dir,
     roll_into_view,
 )
-from wxauto import uiautomation as uia
+from wxauto.uia import uiautomation as uia
 import traceback
 import shutil
 import time
 
+
 class EditBox:
     ...
+
 
 class SelectContactWnd(BaseUISubWnd):
     """选择联系人窗口"""
@@ -40,7 +42,7 @@ class SelectContactWnd(BaseUISubWnd):
             self.control = ControlFromHandle(hwnd)
         else:
             self.control = parent.root.control.PaneControl(ClassName=self._ui_cls_name, searchDepth=1)
-        
+
         self.editbox = self.control.EditControl()
 
     def send(self, target):
@@ -60,7 +62,7 @@ class SelectContactWnd(BaseUISubWnd):
                 self.control.SendKeys('{Esc}')
                 wxlog.debug(f'未找到好友：{target}')
                 return WxResponse.failure(f'未找到好友：{target}')
-            
+
         elif isinstance(target, list):
             n = 0
             fail = []
@@ -91,7 +93,7 @@ class SelectContactWnd(BaseUISubWnd):
                 self.control.SendKeys('{Esc}')
                 wxlog.debug(f'所有好友均未未找到：{target}')
                 return WxResponse.failure(f'所有好友均未未找到：{target}')
-            
+
 
 class CMenuWnd(BaseUISubWnd):
     _ui_cls_name = 'CMenuWnd'
@@ -103,25 +105,25 @@ class CMenuWnd(BaseUISubWnd):
             self.control = uia.ControlFromHandle(menulist[0][0])
         else:
             self.control = self.root.control.MenuControl(ClassName=self._ui_cls_name)
-    
+
     def _lang(self, text: str) -> str:
         return MENU_OPTIONS.get(text, {WxParam.LANGUAGE: text}).get(WxParam.LANGUAGE)
-    
+
     @property
     def option_controls(self):
         return self.control.ListControl().GetChildren()
-    
+
     @property
     def option_names(self):
         return [c.Name for c in self.option_controls]
-    
+
     def select(self, item):
         if not self.exists(0):
             return WxResponse.failure('菜单窗口不存在')
         if isinstance(item, int):
             self.option_controls[item].Click()
             return WxResponse.success()
-        
+
         item = self._lang(item)
         for c in self.option_controls:
             if c.Name == item:
@@ -130,12 +132,13 @@ class CMenuWnd(BaseUISubWnd):
         if self.exists(0):
             self.close()
         return WxResponse.failure(f'未找到选项：{item}')
-    
+
     def close(self):
         try:
             self.control.SendKeys('{ESC}')
         except Exception as e:
             pass
+
 
 class NetErrInfoTipsBarWnd(BaseUISubWnd):
     _ui_cls_name = 'NetErrInfoTipsBarWnd'
@@ -145,7 +148,7 @@ class NetErrInfoTipsBarWnd(BaseUISubWnd):
 
     def __bool__(self):
         return self.exists(0)
-    
+
 
 class WeChatImage(BaseUISubWnd):
     _ui_cls_name = 'ImagePreviewWnd'
@@ -159,7 +162,7 @@ class WeChatImage(BaseUISubWnd):
                 self.type = 'video'
             MainControl1 = [i for i in self.control.GetChildren() if not i.ClassName][0]
             self.ToolsBox, self.PhotoBox = MainControl1.GetChildren()
-            
+
             # tools按钮
             self.t_previous = self.ToolsBox.ButtonControl(Name=self._lang('上一张'))
             self.t_next = self.ToolsBox.ButtonControl(Name=self._lang('下一张'))
@@ -168,10 +171,10 @@ class WeChatImage(BaseUISubWnd):
             self.t_ocr = self.ToolsBox.ButtonControl(Name=self._lang('提取文字'))
             self.t_save = self.control.ButtonControl(Name=self._lang('另存为...'))
             self.t_qrcode = self.ToolsBox.ButtonControl(Name=self._lang('识别图中二维码'))
-    
+
     def _lang(self, text: str) -> str:
         return IMAGE_WINDOW.get(text, {WxParam.LANGUAGE: text}).get(WxParam.LANGUAGE)
-    
+
     def ocr(self, wait=10):
         result = ''
         ctrls = self.PhotoBox.GetChildren()
@@ -189,7 +192,7 @@ class WeChatImage(BaseUISubWnd):
                 self.t_ocr.Click()
             time.sleep(0.1)
         return result
-    
+
     def save(self, dir_path=None, timeout=10):
         """保存图片/视频
 
@@ -231,6 +234,7 @@ class WeChatImage(BaseUISubWnd):
             self.control.SendKeys('{Esc}')
         return filepath
 
+
 class NewFriendElement:
     def __init__(self, control, parent):
         self.parent = parent
@@ -241,10 +245,10 @@ class NewFriendElement:
         self.NewFriendsBox = self.root.chatbox.control.ListControl(Name='新的朋友').GetParentControl()
         self.status = self.control.GetFirstChildControl().GetChildren()[-1]
         self.acceptable = isinstance(self.status, uia.ButtonControl)
-            
+
     def __repr__(self) -> str:
         return f"<wxauto New Friends Element at {hex(id(self))} ({self.name}: {self.msg})>"
-    
+
     def delete(self):
         wxlog.info(f'删除好友请求: {self.name}')
         roll_into_view(self.NewFriendsBox, self.control)
@@ -275,7 +279,7 @@ class NewFriendElement:
             time.sleep(0.1)
         self.root.ChatBox.ButtonControl(Name='').Click()
         return WxResponse.success()
-    
+
     def accept(self, remark=None, tags=None, permission='朋友圈'):
         """接受好友请求
         
@@ -286,7 +290,7 @@ class NewFriendElement:
         """
         if not self.acceptable:
             wxlog.debug(f"当前好友状态无法接受好友请求：{self.name}")
-            return 
+            return
         wxlog.debug(f"接受好友请求：{self.name}  备注：{remark} 标签：{tags}")
         self.root._show()
         roll_into_view(self.NewFriendsBox, self.status)
@@ -305,7 +309,7 @@ class NewFriendElement:
             remarkedit.Click()
             remarkedit.SendKeys('{Ctrl}a')
             remarkedit.SendKeys(remark)
-        
+
         if tags:
             tagedit = NewFriendsWnd.TextControl(Name='标签').GetParentControl().EditControl()
             for tag in tags:

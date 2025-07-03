@@ -11,7 +11,7 @@ from wxauto.utils import (
     SetClipboardText,
 )
 from wxauto.logger import wxlog
-from wxauto.uiautomation import Control
+from wxauto.uia import Control
 from wxauto.utils.tools import roll_into_view
 from typing import (
     List,
