@@ -1,12 +1,12 @@
 [project]
 name = "wxauto"
-version = "39.1.8b2"
+version = "39.1.8b3"
 description = "wxauto 3.9 V2 version"
 authors = [
-    {name = "Cluic", email = "tikic@qq.com"}
+    { name = "dana", email = "dana2777@163.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.8,<3.13"
+requires-python = "~=3.10"
 dependencies = [
     "tenacity",
     "pywin32",
@@ -18,7 +18,10 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["wxauto*"]
+include = ["wxauto*"]  # 只包含 wxauto 相关的包
+
+[tool.setuptools.package-data]
+"wxauto" = ["*.pyd", 'uia/*.pyd']  # 包含 wxauto 目录下的所有 .pyd 文件
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
