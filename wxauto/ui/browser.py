@@ -224,9 +224,11 @@ class WxVideo(WxBrowser):
         if but_ele and but_ele.Exists():
             # but_ele.Click(move=True, return_pos=False)
             but_ele.Click()
-            wxlog.debug(f"""关注视频号`{name}`成功""")
             time.sleep(0.5)
-            return True
+            # 检查是否关注成功
+            if self.control.ButtonControl(Name="已关注", foundIndex=1).Exists():
+                wxlog.debug(f"""关注视频号`{name}`成功""")
+                return True
 
         from wxauto.utils import print_control_tree
         print_control_tree(channel_info_ele.GetParentControl())
