@@ -202,20 +202,35 @@ class WxVideo(WxBrowser):
         if nick_name != name:
             wxlog.info(f"""视频号昵称不一致，当前视频号:{nick_name}，目标视频号:{name}""")
             return False
-        but_ele = channel_info_ele.GetChildren()[1].ButtonControl()
-        if but_ele and but_ele.Name == self._lang("关注"):
+        # 已关注按钮
+        but_ele = self.control.ButtonControl(Name="已关注", foundIndex=1)
+        if but_ele.Exists() and but_ele.Name == self._lang("已关注"):
+            wxlog.debug(f"""视频号`{name}`已关注，不需要重复关注""")
+            time.sleep(0.5)
+            return True
+
+        # 关注按钮
+        but_ele = None
+        for i in range(10):
+            _but_ele = self.control.ButtonControl(Name="关注", foundIndex=i + 1)
+            if _but_ele.Exists() and _but_ele.IsOffscreen == 0:
+                but_ele = _but_ele
+                break
+            elif _but_ele.Exists():
+                continue
+            else:
+                break
+
+        if but_ele and but_ele.Exists():
             # but_ele.Click(move=True, return_pos=False)
             but_ele.Click()
             wxlog.debug(f"""关注视频号`{name}`成功""")
             time.sleep(0.5)
             return True
-        elif but_ele and but_ele.Name == self._lang("已关注"):
-            wxlog.debug(f"""视频号`{name}`已关注，不需要重复关注""")
-            time.sleep(0.5)
-            return True
 
         from wxauto.utils import print_control_tree
-        print_control_tree(channel_info_ele)
+        print_control_tree(channel_info_ele.GetParentControl())
+        return False
 
     def switch_to_tab(self, name):
         """

@@ -822,6 +822,7 @@ class WeChat(Chat, Listener):
 
     def SwitchToVideo(self) -> None:
         """ 切换到视频号"""
+        setattr(self, "__video_browser", None)  # 需要重新绑定浏览器对象
         self.core.navigation.video_icon.Click()
 
     def GetSubWindow(self, nickname: str) -> 'Chat':
