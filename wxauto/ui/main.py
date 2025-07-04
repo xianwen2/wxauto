@@ -268,3 +268,14 @@ class WeChatMainWnd(WeChatSubWnd):
             }
         else:
             return {}
+
+    def close(self):
+        if not hasattr(self, 'control'):
+            return True
+        if not self.control or not self.control.Exists():
+            return True
+        close_ele = self.control.ButtonControl(Name="关闭")
+        if not close_ele.Exists():
+            return True
+        close_ele.Click()
+        return True

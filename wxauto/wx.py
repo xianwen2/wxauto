@@ -690,6 +690,9 @@ class WeChat(Chat, Listener):
                 setattr(self, "__video_browser", WxVideo())
         return getattr(self, '__video_browser', None)
 
+    def close(self):
+        return self.core.close()
+
     def has_video_icon(self):
         """
         是否有视频号按钮
