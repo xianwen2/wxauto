@@ -64,13 +64,13 @@ class WxResponse(dict):
         return self['status'] == '成功'
 
     @classmethod
-    def success(cls, msg=None, data: dict = None):
+    def success(cls, msg=None, data: dict | list = None):
         return cls(status="成功", message=msg, data=data)
 
     @classmethod
-    def failure(cls, msg: str, data: dict = None):
+    def failure(cls, msg: str, data: dict | list = None):
         return cls(status="失败", message=msg, data=data)
 
     @classmethod
-    def error(cls, msg: str, data: dict = None):
+    def error(cls, msg: str, data: dict | list = None):
         return cls(status="错误", message=msg, data=data)
