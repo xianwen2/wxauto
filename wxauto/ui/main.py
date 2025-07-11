@@ -174,6 +174,8 @@ class WeChatMainWnd(WeChatSubWnd):
             __wechat_id = self.control.PaneControl(ClassName="ContactProfileWnd").TextControl(
                 Name=self._lang("微信号", "PROFILE_CARD")).GetParentControl().GetChildren()[1].Name
             self.wechat_id = __wechat_id.strip() if __wechat_id else ""
+            # 隐藏界面
+            self.close()
         return getattr(self, "__wechat_id", "")
 
     @wechat_id.setter
