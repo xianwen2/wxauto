@@ -106,6 +106,13 @@ def parse_msg_type(
     if length in MESSAGE_ATTRS.TEXT_MSG_CONTROL_NUM:
         return getattr(msgtype, f'{attr}TextMessage')(control, parent)
 
+    # QuoteMessage
+    elif (
+            rematch := re.compile(_lang('re_引用消息'), re.DOTALL).match(content)
+                       and length in MESSAGE_ATTRS.QUOTE_MSG_CONTROL_NUM
+    ):
+        return getattr(msgtype, f'{attr}QuoteMessage')(control, parent)
+
     # VoiceMessage    
     elif (
             rematch := re.compile(_lang('re_语音')).match(content)

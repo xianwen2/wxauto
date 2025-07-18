@@ -43,7 +43,7 @@ from wxauto.utils import (
     GetCursorWindow,
     get_active_window,
 )
-from wxauto.ui.browser import WxVideo
+from wxauto.ui.browser import WxVideo, WxInvite
 from typing import Optional
 
 if TYPE_CHECKING:
@@ -146,6 +146,24 @@ class Chat:
     def Show(self):
         """显示窗口"""
         self.core._show()
+
+    def minimize_window(self):
+        """窗口最小化"""
+        try:
+            self.core.minimize_window()
+        except Exception as e:
+            wxlog.error(f"""{self}窗口最小化失败:{e.__str__()}""")
+
+    @property
+    def browser_invite(self) -> WxInvite:
+        if not getattr(self, '__browser_invite', None):
+            time.sleep(0.2)
+            # 获取当前激活窗口
+            hwnd, window_title, class_name = get_active_window()
+            wxlog.debug(f"""获取到的窗口信息({hwnd, class_name, window_title})""")
+            if class_name == WxInvite._ui_cls_name and window_title == WxInvite._ui_name:
+                setattr(self, "__browser_invite", WxInvite(hwnd))
+        return getattr(self, '__browser_invite', None)
 
     def ChatInfo(self) -> Dict[str, str]:
         """获取聊天窗口信息
@@ -658,7 +676,12 @@ class ThreadPoolExecutor(__concurrent_futures__base.Executor):
 class WeChat(Chat, Listener):
     """ 微信主窗口实例 """
 
-    def __init__(self, nickname=None, debug=False, **kwargs):
+    def __init__(
+            self,
+            nickname=None,
+            debug: bool = False,
+            **kwargs
+    ):
         hwnd = None
         if 'hwnd' in kwargs:
             hwnd = kwargs['hwnd']
@@ -721,39 +744,43 @@ class WeChat(Chat, Listener):
                     chat.Show()
                     self._safe_callback(callback, msg, chat)
 
-    def GetSession(self):  # reliably restored by inspect
-        """
-        获取当前会话列表
+    def GetSession(self) -> List['SessionElement']:
+        """获取当前会话列表
 
         Returns:
             List[SessionElement]: 当前会话列表
         """
         return self.core.sessionbox.get_session()
 
-    def ChatWith(self,
-                 who: str,
-                 exact: bool = False,
-                 force: bool = False,
-                 force_wait: Union[float, int] = 0.5):
+    def ChatWith(
+            self,
+            who: str,
+            exact: bool = False,
+            force: bool = False,
+            force_wait: Union[float, int] = 0.5
+    ):
         """打开聊天窗口
-
+        
         Args:
             who (str): 要聊天的对象
             exact (bool, optional): 搜索who好友时是否精确匹配，默认False
             force (bool, optional): 不论是否匹配到都强制切换，若启用则exact参数无效，默认False
                 > 注：force原理为输入搜索关键字后，在等待`force_wait`秒后不判断结果直接回车，谨慎使用
             force_wait (Union[float, int], optional): 强制切换时等待时间，默认0.5秒
+            
         """
         return self.core.switch_chat(who, exact, force, force_wait)
 
-    def AddListenChat(self,
-                      nickname: str,
-                      callback: Callable[['Message', str], None], ):  # reliably restored by inspect
+    def AddListenChat(
+            self,
+            nickname: str,
+            callback: Callable[['Message', str], None],
+    ):
         """添加监听聊天，将聊天窗口独立出去形成Chat对象子窗口，用于监听
-
+        
         Args:
             nickname (str): 要监听的聊天对象
-            callback (Callable[['Message', Chat], None]): 回调函数，参数为(Message对象, Chat对象)，返回值为None
+            callback (Callable[[Message, str], None]): 回调函数，参数为(Message对象, 聊天名称)
         """
         if nickname in self.listen:
             return WxResponse.failure('该聊天已监听')
@@ -765,7 +792,7 @@ class WeChat(Chat, Listener):
         self.listen[name] = (chat, callback)
         return chat
 
-    def StopListening(self, remove: bool = True):
+    def StopListening(self, remove: bool = True) -> None:
         """停止监听
 
         Args:

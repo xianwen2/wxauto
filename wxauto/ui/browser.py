@@ -17,6 +17,7 @@ from wxauto.uia import uiautomation as uia
 from wxauto.uia import ControlFromHandle, PatternId
 from wxauto.param import WxResponse, WxParam
 from .component import SelectContactWnd
+from wxauto.utils import print_control_tree
 from wxauto.logger import wxlog
 import time
 
@@ -35,6 +36,10 @@ class WxBrowser(BaseUIWnd):
 
     def _lang(self, text: str):
         return WECHAT_BROWSER.get(text, {WxParam.LANGUAGE: text}).get(WxParam.LANGUAGE)
+
+    def Show(self):
+        """显示窗口"""
+        self._show()
 
     def search(self, url):
         search_btn_eles = [
@@ -81,6 +86,72 @@ class WxBrowser(BaseUIWnd):
         finally:
             self.close()
 
+    def switch_to_tab(self, name) -> 'WxResponse':
+        """
+        切换到指定标签页
+        :param name:标签页名字
+        :return bool
+        """
+        self.Show()  # 需要激活才能获取到正确的窗口
+        try:
+            tab_item = self.control.TabControl().TabItemControl(Name=name)
+            if tab_item.ButtonControl(Name=self._lang("关闭")).Exists():
+                return WxResponse.success(msg="已经是目标页面，不需要切换")
+            index = 1
+            while True:
+                if len(self.control.TabControl().FindAll(control_type='TabItemControl')) <= index:
+                    # 未找到指定的标签页
+                    return WxResponse.failure(msg="未找打指定的标签页")
+                tab_item.Click()
+                time.sleep(0.5)
+                if tab_item.ButtonControl(Name=self._lang("关闭")).Exists():
+                    wxlog.debug(f"""切换到 {name} 标签页成功""")
+                    return WxResponse.success(msg=f"""切换到 {name} 标签页成功""")
+                index += 1
+                time.sleep(0.5)
+        except Exception as e:
+            wxlog.exception(f"切换标签页异常,{e.__str__()}")
+            return WxResponse.error(msg=f"切换标签页异常,{e.__str__()}")
+
+    def get_all_tab(self) -> 'WxResponse':
+        """
+        获取所有标签页名字
+        """
+        self.Show()  # 需要激活才能获取到正确的窗口
+        try:
+            tab_names = []
+            tab_ele = self.control.TabControl()
+            if not tab_ele.Exists():
+                return WxResponse.failure(msg="`TabControl`不存在", data=tab_names)
+            tab_item = tab_ele.TabItemControl()
+            if not tab_item.Exists():
+                return WxResponse.failure(msg="`TabItemControl`不存在", data=tab_names)
+            for _tab_item in tab_item.GetParentControl().GetChildren():
+                # print(_tab_item)
+                if _tab_item and _tab_item.Name:
+                    tab_names.append(_tab_item.Name)
+            return WxResponse.success(data=tab_names)
+        except Exception as e:
+            wxlog.exception(f"获取所有标签页名字异常,{e.__str__()}")
+            return WxResponse.error(msg=f"获取所有标签页名字异常,{e.__str__()}")
+
+    def close_tab(self, name=None) -> 'WxResponse':
+        """
+        关闭标签页
+        :param name: 如果没用指定时默认关闭当前标签页
+        """
+        if name:
+            self.switch_to_tab(name)
+        try:
+            tab_ele = self.control.TabItemControl().GetParentControl().ButtonControl(Name=self._lang('关闭'))
+            if tab_ele.Exists():
+                tab_name = tab_ele.GetParentControl().Name
+                tab_ele.Click()
+                wxlog.debug(f"""视频号-标签页`{tab_name}`关闭成功""")
+        except Exception as e:
+            wxlog.exception(f"关闭标签页异常,{e.__str__()}")
+            return WxResponse.error(msg=f"关闭标签页异常,{e.__str__()}")
+
     def close(self):
         try:
             self.close_button.Click(move=True, return_pos=False)
@@ -92,10 +163,6 @@ class WxVideo(WxBrowser):
     """
     视频号
     """
-
-    def Show(self):
-        """显示窗口"""
-        self._show()
 
     def clear_search(self):
         try:
@@ -253,71 +320,51 @@ class WxVideo(WxBrowser):
             wxlog.exception(f"点击关注按钮失败,{e.__str__()}")
             return WxResponse.error(msg=f"点击关注按钮失败,{e.__str__()}")
 
-    def switch_to_tab(self, name) -> 'WxResponse':
-        """
-        切换到指定标签页
-        :param name:标签页名字
-        :return bool
-        """
-        self.Show()  # 需要激活才能获取到正确的窗口
-        try:
-            tab_item = self.control.TabControl().TabItemControl(Name=name)
-            if tab_item.ButtonControl(Name=self._lang("关闭")).Exists():
-                return WxResponse.success(msg="已经是目标页面，不需要切换")
-            index = 1
-            while True:
-                if len(self.control.TabControl().FindAll(control_type='TabItemControl')) <= index:
-                    # 未找到指定的标签页
-                    return WxResponse.failure(msg="未找打指定的标签页")
-                # uia.SendKeys('{CTRL}{Tab}')
-                tab_item.Click()
-                # tab_item.Click(move=True, return_pos=False)
-                time.sleep(0.5)
-                if tab_item.ButtonControl(Name=self._lang("关闭")).Exists():
-                    wxlog.debug(f"""切换到 {name} 标签页成功""")
-                    return WxResponse.success(msg=f"""切换到 {name} 标签页成功""")
-                index += 1
-                time.sleep(0.5)
-        except Exception as e:
-            wxlog.exception(f"切换标签页异常,{e.__str__()}")
-            return WxResponse.error(msg=f"切换标签页异常,{e.__str__()}")
 
-    def get_all_tab(self) -> 'WxResponse':
-        """
-        获取所有标签页名字
-        """
-        self.Show()  # 需要激活才能获取到正确的窗口
-        try:
-            tab_names = []
-            tab_ele = self.control.TabControl()
-            if not tab_ele.Exists():
-                return WxResponse.failure(msg="`TabControl`不存在", data=tab_names)
-            tab_item = tab_ele.TabItemControl()
-            if not tab_item.Exists():
-                return WxResponse.failure(msg="`TabItemControl`不存在", data=tab_names)
-            for _tab_item in tab_item.GetParentControl().GetChildren():
-                # print(_tab_item)
-                if _tab_item and _tab_item.Name:
-                    tab_names.append(_tab_item.Name)
-            return WxResponse.success(data=tab_names)
-        except Exception as e:
-            wxlog.exception(f"获取所有标签页名字异常,{e.__str__()}")
-            return WxResponse.error(msg=f"获取所有标签页名字异常,{e.__str__()}")
+class WxInvite(WxBrowser):
+    """
+    视频号邀请
+    """
 
-    def close_tab(self, name=None) -> 'WxResponse':
+    # 处理视频号运营者邀请
+    def accept_invitation(self):
         """
-        关闭标签页
-        :param name: 如果没用指定时默认关闭当前标签页
+        点击接受邀请
         """
-        if name:
-            self.switch_to_tab(name)
         try:
-            tab_ele = self.control.TabItemControl().GetParentControl().ButtonControl(Name=self._lang('关闭'))
-            if tab_ele.Exists():
-                tab_name = tab_ele.GetParentControl().Name
-                # tab_ele.Click(move=True, return_pos=False)
-                tab_ele.Click()
-                wxlog.debug(f"""视频号-标签页`{tab_name}`关闭成功""")
+            # 获取邀请已过期
+            text_ele = self.control.TextControl(Name="邀请已过期")
+            if text_ele.Exists():
+                wxlog.info(f"""邀请已过期！！！""")
+                return WxResponse.failure(msg="邀请已过期")
+
+            # 已成为运营者
+            text_ele = self.control.TextControl(Name="已成为运营者")
+            if text_ele.Exists():
+                wxlog.info(f"""已成为运营者""")
+                return WxResponse.success(msg=f"""已成为运营者""")
+
+            # 检查是否有 视频号运营者邀请
+            text_ele = self.control.TextControl(Name="视频号运营者邀请")
+            if not text_ele.Exists():
+                wxlog.warning(f"""没有找到`视频号运营者邀请`""")
+                print_control_tree(self.control)
+                return WxResponse.failure(msg=f"""没有找到`视频号运营者邀请`""")
+
+            # 接受邀请
+            but_ele = self.control.TextControl(Name='接受')
+            if but_ele.Exists():
+                but_ele.Click()
+                time.sleep(0.5)
+                for i in range(10):  # 获取成功结果
+                    if self.control.TextControl(Name="已成为运营者").Exists():
+                        return WxResponse.success(msg=f"""接受邀请成功""")
+                    else:
+                        time.sleep(0.5)
+                        continue
+                return WxResponse.success(msg=f"""接受邀请成功""")
+            print_control_tree(self.control)
+            return WxResponse.failure(msg="未知按钮")
         except Exception as e:
-            wxlog.exception(f"关闭标签页异常,{e.__str__()}")
-            return WxResponse.error(msg=f"关闭标签页异常,{e.__str__()}")
+            wxlog.exception(f"接受邀请失败,{e.__str__()}")
+            return WxResponse.error(msg=f"接受邀请失败,{e.__str__()}")

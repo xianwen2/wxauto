@@ -1,3 +1,22 @@
+# wxauto
+> 开源项目[wxauto](https://github.com/cluic/wxauto)二次开发
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 [![plus](https://plus.wxauto.org/images/wxauto_plus_logo3.png)](https://plus.wxauto.org)
 
 # wxautoV2版本

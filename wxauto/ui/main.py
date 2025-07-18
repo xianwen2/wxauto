@@ -57,6 +57,15 @@ class WeChatSubWnd(BaseUISubWnd):
             self._pid = self.control.ProcessId
         return self._pid
 
+    def minimize_window(self):
+        try:
+            but_ele = self.control.ButtonControl(Name="最小化")
+            if but_ele.Exists():
+                but_ele.Click()
+                wxlog.info(f"""{self}窗口最小化成功""")
+        except Exception as e:
+            wxlog.error(f"""{self}窗口最小化失败：{e.__str__()}""")
+
     def _get_chatbox(
             self,
             nickname: str = None,
@@ -78,7 +87,10 @@ class WeChatSubWnd(BaseUISubWnd):
             at: Union[str, List[str]] = None,
             exact: bool = False,
     ) -> WxResponse:
-        return self._get_chatbox(who, exact).send_msg(msg, clear, at)
+        chatbox = self._get_chatbox(who, exact)
+        if not chatbox:
+            return WxResponse.failure(f'未找到会话: {who}')
+        return chatbox.send_msg(msg, clear, at)
 
     def send_files(
             self,
@@ -86,14 +98,20 @@ class WeChatSubWnd(BaseUISubWnd):
             who=None,
             exact=False
     ) -> WxResponse:
-        return self._get_chatbox(who, exact).send_file(filepath)
+        chatbox = self._get_chatbox(who, exact)
+        if not chatbox:
+            return WxResponse.failure(f'未找到会话: {who}')
+        return chatbox.send_file(filepath)
 
     def get_group_members(
             self,
             who: str = None,
             exact: bool = False
     ) -> List[str]:
-        return self._get_chatbox(who, exact).get_group_members()
+        chatbox = self._get_chatbox(who, exact)
+        if not chatbox:
+            return WxResponse.failure(f'未找到会话: {who}')
+        return chatbox.get_group_members()
 
     def get_msgs(self):
         chatbox = self._get_chatbox()
@@ -159,7 +177,9 @@ class WeChatMainWnd(WeChatSubWnd):
             return chatbox.chatbox
         else:
             if nickname:
-                self.sessionbox.switch_chat(keywords=nickname, exact=exact)
+                switch_result = self.sessionbox.switch_chat(keywords=nickname, exact=exact)
+                if not switch_result:
+                    return None
             if self.chatbox.msgbox.Exists(0.5):
                 return self.chatbox
 
@@ -272,12 +292,17 @@ class WeChatMainWnd(WeChatSubWnd):
             return {}
 
     def close(self):
-        if not hasattr(self, 'control'):
+        try:
+            if not hasattr(self, 'control'):
+                return True
+            if not self.control or not self.control.Exists():
+                return True
+            close_ele = self.control.ButtonControl(Name="关闭")
+            if not close_ele.Exists():
+                return True
+            close_ele.Click()
+            wxlog.info(f"""{self}窗口关闭""")
             return True
-        if not self.control or not self.control.Exists():
-            return True
-        close_ele = self.control.ButtonControl(Name="关闭")
-        if not close_ele.Exists():
-            return True
-        close_ele.Click()
-        return True
+        except Exception as e:
+            wxlog.error(f"""{self}窗口关闭失败:{e.__str__()}""")
+            return False
